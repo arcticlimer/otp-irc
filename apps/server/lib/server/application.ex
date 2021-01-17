@@ -1,20 +1,27 @@
 defmodule Server.Application do
-  # See https://hexdocs.pm/elixir/Application.html
-  # for more information on OTP Applications
   @moduledoc false
 
   use Application
 
+  require Logger
+
   @impl true
   def start(_type, _args) do
     children = [
-      # Starts a worker by calling: Server.Worker.start_link(arg)
-      # {Server.Worker, arg}
+      {Task.Supervisor, name: Server.TaskSupervisor},
+      Supervisor.child_spec(
+        {Task, fn -> Server.accept(port()) end},
+        restart: :permanent
+      )
     ]
 
-    # See https://hexdocs.pm/elixir/Supervisor.html
-    # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Server.Supervisor]
+    Logger.info("Accepting connections on port #{port()}!")
     Supervisor.start_link(children, opts)
+  end
+
+  defp port do
+    # TODO config not being loaded
+    Application.get_env(:server, :port, 6667)
   end
 end
